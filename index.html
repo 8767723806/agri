@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriTrace – 3D Interactive References</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #0a1a12;
+      --bg-mid: #0f2a1c;
+      --accent: #4ade80;
+      --accent-glow: #22c55e;
+      --accent-dim: #166534;
+      --text-light: #e2f0e8;
+      --text-muted: #94b8a2;
+      --card-bg: rgba(15, 42, 28, 0.65);
+      --card-border: rgba(74, 222, 128, 0.2);
+      --card-hover: rgba(20, 60, 38, 0.85);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(ellipse at 20% 20%, #0f2a1c, #0a1a12 70%);
+      min-height: 100vh;
+      color: var(--text-light);
+      perspective: 1200px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* animated grid background */
+    .grid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(74, 222, 128, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74, 222, 128, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+      animation: gridMove 20s linear infinite;
+    }
+
+    @keyframes gridMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 50px 50px; }
+    }
+
+    /* glow orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    .orb-1 {
+      width: 400px;
+      height: 400px;
+      background: #4ade80;
+      top: -100px;
+      right: -100px;
+      animation: orbFloat1 15s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      width: 350px;
+      height: 350px;
+      background: #22c55e;
+      bottom: -80px;
+      left: -80px;
+      animation: orbFloat2 18s ease-in-out infinite;
+    }
+
+    .orb-3 {
+      width: 250px;
+      height: 250px;
+      background: #166534;
+      top: 50%;
+      left: 50%;
+      animation: orbFloat3 12s ease-in-out infinite;
+    }
+
+    @keyframes orbFloat1 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-40px, 40px) scale(1.15); }
+    }
+
+    @keyframes orbFloat2 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(50px, -30px) scale(1.1); }
+    }
+
+    @keyframes orbFloat3 {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-30%, -60%) scale(1.2); }
+    }
+
+    #particle-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 920px;
+      margin: auto;
+      padding: 28px 18px 60px;
+    }
+
+    /* 3D header */
+    .header-3d {
+      background: linear-gradient(145deg, #0f3a22, #0a2416);
+      color: white;
+      padding: 45px 38px;
+      border-radius: 32px;
+      margin-bottom: 35px;
+      transform-style: preserve-3d;
+      transform: rotateX(3deg) rotateY(-2deg) translateZ(20px);
+      box-shadow: 
+        0 30px 50px -15px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(74, 222, 128, 0.3) inset,
+        0 0 40px rgba(74, 222, 128, 0.15);
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      animation: floatHeader 6s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(74, 222, 128, 0.25);
+    }
+
+    .header-3d:hover {
+      transform: rotateX(1deg) rotateY(0deg) translateZ(35px) scale(1.01);
+      box-shadow: 
+        0 40px 60px -15px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(74, 222, 128, 0.5) inset,
+        0 0 60px rgba(74, 222, 128, 0.3);
+    }
+
+    .header-3d::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(74, 222, 128, 0.12) 0%, transparent 60%);
+      transform: rotate(25deg);
+      animation: shimmer 10s infinite linear;
+      pointer-events: none;
+    }
+
+    .header-3d::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanLine 4s linear infinite;
+    }
+
+    @keyframes scanLine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .header-3d h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 0%, #4ade80 50%, #22c55e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.3rem;
+      transform: translateZ(40px);
+      filter: drop-shadow(0 0 20px rgba(74, 222, 128, 0.4));
+      animation: textGlow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes textGlow {
+      0% { filter: drop-shadow(0 0 15px rgba(74, 222, 128, 0.3)); }
+      100% { filter: drop-shadow(0 0 30px rgba(74, 222, 128, 0.6)); }
+    }
+
+    .header-3d .subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      transform: translateZ(25px);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.01em;
+    }
+
+    .header-3d .badge-pill {
+      background: rgba(74, 222, 128, 0.15);
+      backdrop-filter: blur(4px);
+      padding: 8px 22px;
+      border-radius: 40px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateZ(20px);
+      border: 1px solid rgba(74, 222, 128, 0.35);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(74, 222, 128, 0.15) inset;
+      margin-top: 10px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.75rem;
+      animation: badgePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes badgePulse {
+      0%, 100% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 20px rgba(74, 222, 128, 0.15) inset; }
+      50% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 0 35px rgba(74, 222, 128, 0.4) inset; }
+    }
+
+    /* info stats */
+    .info-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      margin: 30px 0 10px;
+      transform-style: preserve-3d;
+      perspective: 800px;
+    }
+
+    .stat-item {
+      background: rgba(15, 42, 28, 0.7);
+      backdrop-filter: blur(10px);
+      border-radius: 50px;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(74, 222, 128, 0.15) inset;
+      transform: rotateX(2deg) rotateY(-2deg) translateZ(5px);
+      transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+      font-weight: 600;
+      color: var(--text-light);
+      animation: statPulse 3s infinite alternate;
+      animation-delay: calc(var(--i) * 0.3s);
+      border: 1px solid rgba(74, 222, 128, 0.15);
+      cursor: default;
+    }
+
+    .stat-item:hover {
+      transform: rotateX(0deg) rotateY(0deg) translateZ(25px) scale(1.05);
+      box-shadow: 0 25px 45px -12px rgba(74, 222, 128, 0.35), 0 0 0 1px rgba(74, 222, 128, 0.4) inset;
+      background: rgba(20, 60, 38, 0.9);
+      border-color: rgba(74, 222, 128, 0.5);
+    }
+
+    .stat-item i {
+      font-size: 1.4rem;
+      color: var(--accent);
+      filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.6));
+      transition: transform 0.3s;
+    }
+
+    .stat-item:hover i {
+      transform: scale(1.2) rotate(5deg);
+    }
+
+    @keyframes statPulse {
+      0% { box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(74, 222, 128, 0.15) inset; }
+      100% { box-shadow: 0 15px 35px -8px rgba(74, 222, 128, 0.25), 0 0 0 1px rgba(74, 222, 128, 0.3) inset; }
+    }
+
+    /* 3D cards */
+    .card-3d {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 24px 28px;
+      margin: 22px 0;
+      transform-style: preserve-3d;
+      transform: rotateX(1.5deg) rotateY(1deg) translateZ(10px);
+      box-shadow: 
+        0 25px 40px -15px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(74, 222, 128, 0.08) inset,
+        0 0 25px rgba(74, 222, 128, 0.05);
+      transition: all 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+      position: relative;
+      will-change: transform, box-shadow;
+      animation: cardFloat 5s ease-in-out infinite;
+      animation-delay: calc(var(--i, 0) * 0.25s);
+      overflow: hidden;
+    }
+
+    .card-3d::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(74, 222, 128, 0.08) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+    }
+
+    .card-3d:hover::before {
+      opacity: 1;
+    }
+
+    .card-3d:hover {
+      transform: rotateX(0deg) rotateY(0deg) translateZ(30px) scale(1.02);
+      box-shadow: 
+        0 40px 60px -18px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(74, 222, 128, 0.3) inset,
+        0 0 40px rgba(74, 222, 128, 0.15);
+      background: var(--card-hover);
+      border-color: rgba(74, 222, 128, 0.4);
+    }
+
+    .card-3d h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-light);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transform: translateZ(15px);
+      line-height: 1.4;
+    }
+
+    .card-3d h2 .num {
+      background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+      color: #0a1a12;
+      min-width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      box-shadow: 0 8px 18px -5px rgba(74, 222, 128, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+      transform: translateZ(10px) rotateY(5deg);
+      transition: transform 0.3s, box-shadow 0.3s;
+      flex-shrink: 0;
+    }
+
+    .card-3d:hover .num {
+      transform: translateZ(25px) rotateY(0deg) scale(1.1);
+      box-shadow: 0 12px 25px -5px rgba(74, 222, 128, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+    }
+
+    .card-3d p {
+      line-height: 1.65;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      transform: translateZ(8px);
+      transition: color 0.3s;
+    }
+
+    .card-3d:hover p {
+      color: var(--text-light);
+    }
+
+    .card-3d a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      word-break: break-all;
+      background: rgba(74, 222, 128, 0.1);
+      padding: 8px 16px;
+      border-radius: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+      border: 1px solid rgba(74, 222, 128, 0.25);
+      transform: translateZ(12px);
+      font-size: 0.85rem;
+      margin-top: 4px;
+    }
+
+    .card-3d a:hover {
+      background: var(--accent);
+      color: #0a1a12;
+      box-shadow: 0 12px 25px -8px var(--accent-glow), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+      border-color: var(--accent);
+      transform: translateZ(25px) scale(1.03);
+    }
+
+    .card-3d a i {
+      font-size: 0.75rem;
+      transition: transform 0.3s;
+    }
+
+    .card-3d a:hover i {
+      transform: translateX(3px);
+    }
+
+    /* extra info card special style */
+    .card-3d.extra {
+      background: linear-gradient(135deg, rgba(15, 42, 28, 0.9), rgba(10, 36, 22, 0.95));
+      border-color: rgba(74, 222, 128, 0.35);
+    }
+
+    .card-3d.extra h2 {
+      color: var(--accent);
+    }
+
+    .card-3d.extra h2 i {
+      color: var(--accent);
+      filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.6));
+    }
+
+    /* footer 3d */
+    .footer-3d {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      background: rgba(15, 42, 28, 0.6);
+      backdrop-filter: blur(12px);
+      padding: 22px 24px;
+      border-radius: 40px;
+      box-shadow: 0 20px 35px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(74, 222, 128, 0.15) inset;
+      transform: rotateX(1deg) translateZ(10px);
+      transition: all 0.4s;
+      font-weight: 500;
+      border: 1px solid rgba(74, 222, 128, 0.1);
+    }
+
+    .footer-3d:hover {
+      transform: rotateX(0deg) translateZ(25px);
+      background: rgba(20, 60, 38, 0.7);
+      box-shadow: 0 25px 45px -15px rgba(74, 222, 128, 0.3), 0 0 0 1px rgba(74, 222, 128, 0.3) inset;
+      color: var(--text-light);
+    }
+
+    .footer-3d i {
+      color: var(--accent);
+    }
+
+    /* animations */
+    @keyframes floatHeader {
+      0%, 100% { transform: rotateX(3deg) rotateY(-2deg) translateZ(20px) translateY(0px); }
+      50% { transform: rotateX(3deg) rotateY(-2deg) translateZ(20px) translateY(-10px); }
+    }
+
+    @keyframes cardFloat {
+      0%, 100% { transform: rotateX(1.5deg) rotateY(1deg) translateZ(10px) translateY(0px); }
+      50% { transform: rotateX(1.5deg) rotateY(1deg) translateZ(10px) translateY(-7px); }
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-30%) rotate(25deg); opacity: 0.2; }
+      50% { transform: translateX(30%) rotate(25deg); opacity: 0.5; }
+      100% { transform: translateX(-30%) rotate(25deg); opacity: 0.2; }
+    }
+
+    /* responsive */
+    @media (max-width: 700px) {
+      .header-3d h1 { font-size: 2.2rem; }
+      .header-3d { padding: 30px 24px; }
+      .card-3d { padding: 20px; }
+      .card-3d h2 { font-size: 1.05rem; }
+      .stat-item { padding: 10px 18px; font-size: 0.85rem; }
+      .card-3d a { font-size: 0.8rem; padding: 6px 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .header-3d h1 { font-size: 1.8rem; }
+      .header-3d .subtitle { font-size: 0.95rem; }
+      .container { padding: 18px 12px 40px; }
+      .card-3d h2 { font-size: 0.95rem; gap: 10px; }
+      .card-3d h2 .num { min-width: 28px; height: 28px; font-size: 0.8rem; }
+    }
+
+    /* custom scrollbar */
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #0a1a12; }
+    ::-webkit-scrollbar-thumb { 
+      background: linear-gradient(180deg, var(--accent), var(--accent-dim)); 
+      border-radius: 10px;
+      border: 2px solid #0a1a12;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-glow); }
+
+    /* selection */
+    ::selection {
+      background: var(--accent);
+      color: #0a1a12;
+    }
+
+    /* cursor glow effect */
+    .cursor-glow {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(74, 222, 128, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <!-- animated background layers -->
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  
+  <!-- cursor glow -->
+  <div class="cursor-glow" id="cursorGlow"></div>
+  
+  <!-- particle canvas -->
+  <canvas id="particle-canvas"></canvas>
+
+  <div class="container">
+    <!-- 3D header -->
+    <header class="header-3d">
+      <h1><i class="fas fa-seedling me-2" style="color: var(--accent); -webkit-text-fill-color: var(--accent);"></i>AgriTrace</h1>
+      <p class="subtitle">Digital Seed-to-Harvest Traceability &amp; Crop Performance Tracking System</p>
+      <span class="badge-pill"><i class="fas fa-book-open"></i> Project References • Interactive 3D</span>
+    </header>
+
+    <!-- extra information stats row -->
+    <div class="info-stats">
+      <div class="stat-item" style="--i:1"><i class="fas fa-database"></i> 6 Core References</div>
+      <div class="stat-item" style="--i:2"><i class="fas fa-microchip"></i> AI &amp; Imaging Focus</div>
+      <div class="stat-item" style="--i:3"><i class="fas fa-globe"></i> Gov + Research</div>
+    </div>
+
+    <!-- reference cards -->
+    <div class="card-3d" style="--i:0">
+      <h2><span class="num">1</span> SATHI – Seed Traceability Portal, Government of India</h2>
+      <p>SATHI covers seed production, certification, inventory and sale, supporting seed lifecycle and traceability. Seed bag tag/lot number can be used to trace seed details.</p>
+      <a href="https://seedtrace.gov.in/" target="_blank"><i class="fas fa-external-link-alt"></i> https://seedtrace.gov.in/</a>
+    </div>
+
+    <div class="card-3d" style="--i:1">
+      <h2><span class="num">2</span> SATHI – Seed Lot Details / Quality Information</h2>
+      <p>Lot/tag information includes germination, physical purity, abnormal seed, diseased seed, insect damage and field inspection details.</p>
+      <a href="https://seedtrace.gov.in/ms014/seedTraceOfTLTag" target="_blank"><i class="fas fa-external-link-alt"></i> https://seedtrace.gov.in/ms014/seedTraceOfTLTag</a>
+    </div>
+
+    <div class="card-3d" style="--i:2">
+      <h2><span class="num">3</span> High-Throughput Phenotyping of Seed/Seedling Evaluation Using Digital Image Analysis</h2>
+      <p>Research on digital image analysis for evaluating seed and seedling traits, supporting future image-based seed/crop assessment.</p>
+      <a href="https://www.mdpi.com/2073-4395/8/5/63" target="_blank"><i class="fas fa-external-link-alt"></i> https://www.mdpi.com/2073-4395/8/5/63</a>
+    </div>
+
+    <div class="card-3d" style="--i:3">
+      <h2><span class="num">4</span> Current Optical Sensing Applications in Seeds Vigor Determination</h2>
+      <p>Review of optical and image-based sensing techniques for seed vigor, purity and germination, including rapid and non-destructive approaches.</p>
+      <a href="https://www.mdpi.com/2073-4395/13/4/1167" target="_blank"><i class="fas fa-external-link-alt"></i> https://www.mdpi.com/2073-4395/13/4/1167</a>
+    </div>
+
+    <div class="card-3d" style="--i:4">
+      <h2><span class="num">5</span> Non-Destructive Testing of Alfalfa Seed Vigor Based on Multispectral Imaging</h2>
+      <p>Study using multispectral imaging and machine learning to assess seed vigor, viability and germination.</p>
+      <a href="https://www.mdpi.com/1424-8220/22/7/2760" target="_blank"><i class="fas fa-external-link-alt"></i> https://www.mdpi.com/1424-8220/22/7/2760</a>
+    </div>
+
+    <div class="card-3d" style="--i:5">
+      <h2><span class="num">6</span> Advances in Seed Health Testing: Molecular Diagnostics, Imaging, and AI</h2>
+      <p>Review discussing imaging, AI/ML and molecular diagnostics in seed health testing, supporting the proposed AI-based future scope.</p>
+      <a href="https://www.mdpi.com/2674-1024/5/1/15" target="_blank"><i class="fas fa-external-link-alt"></i> https://www.mdpi.com/2674-1024/5/1/15</a>
+    </div>
+
+    <!-- extra info card -->
+    <div class="card-3d extra" style="--i:6">
+      <h2><i class="fas fa-lightbulb"></i> Why This Matters</h2>
+      <p>AgriTrace integrates seed lot traceability (SATHI) with advanced imaging, AI and non-destructive testing to build a transparent, data-driven seed-to-harvest ecosystem. The references span government infrastructure, high-throughput phenotyping, optical sensing, and machine learning — forming the backbone for next-gen crop performance tracking.</p>
+      <p style="margin-top:12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><i class="fas fa-check-circle" style="color: var(--accent);"></i> <strong style="color: var(--accent);">6+</strong> authoritative sources</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><i class="fas fa-check-circle" style="color: var(--accent);"></i> <strong style="color: var(--accent);">3</strong> research domains</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><i class="fas fa-check-circle" style="color: var(--accent);"></i> <strong style="color: var(--accent);">1</strong> unified traceability vision</span>
+      </p>
+    </div>
+
+    <footer class="footer-3d">
+      <i class="fas fa-leaf me-1"></i> AgriTrace • Reference page for academic/project presentation • <span style="color: var(--accent);">Dark Interactive Theme</span>
+    </footer>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- particle animation + cursor glow + tilt effect -->
+  <script>
+    (function() {
+      // particle canvas
+      const canvas = document.getElementById('particle-canvas');
+      const ctx = canvas.getContext('2d');
+      let width, height;
+      let particles = [];
+
+      function initParticles() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const particleCount = Math.min(100, Math.floor(width * height / 18000));
+        particles = [];
+        for (let i = 0; i < particleCount; i++) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            radius: Math.random() * 2.5 + 1,
+            speedX: (Math.random() - 0.5) * 0.35,
+            speedY: (Math.random() - 0.5) * 0.25,
+            opacity: Math.random() * 0.4 + 0.15,
+            hue: Math.random() * 30 + 100,
+          });
+        }
+      }
+
+      function drawParticles() {
+        ctx.clearRect(0, 0, width, height);
+        particles.forEach(p => {
+          p.x += p.speedX;
+          p.y += p.speedY;
+
+          if (p.x < 0) p.x = width;
+          if (p.x > width) p.x = 0;
+          if (p.y < 0) p.y = height;
+          if (p.y > height) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(${p.hue}, 70%, 55%, ${p.opacity})`;
+          ctx.shadowColor = `hsla(${p.hue}, 80%, 70%, 0.6)`;
+          ctx.shadowBlur = 15;
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+        requestAnimationFrame(drawParticles);
+      }
+
+      window.addEventListener('resize', () => {
+        initParticles();
+      });
+
+      initParticles();
+      drawParticles();
+
+      // cursor glow
+      const cursorGlow = document.getElementById('cursorGlow');
+      let mouseX = 0, mouseY = 0;
+      let glowX = 0, glowY = 0;
+
+      document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      function animateGlow() {
+        glowX += (mouseX - glowX) * 0.08;
+        glowY += (mouseY - glowY) * 0.08;
+        cursorGlow.style.left = glowX + 'px';
+        cursorGlow.style.top = glowY + 'px';
+        requestAnimationFrame(animateGlow);
+      }
+      animateGlow();
+
+      // subtle parallax tilt on cards
+      const cards = document.querySelectorAll('.card-3d');
+      cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          const rotateX = ((y - centerY) / centerY) * -4;
+          const rotateY = ((x - centerX) / centerX) * 4;
+          
+          card.style.transform = `rotateX(${rotateX + 1.5}deg) rotateY(${rotateY + 1}deg) translateZ(25px) scale(1.02)`;
+        });
+
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = '';
+        });
+      });
+
+    })();
+  </script>
+</body>
+</html>
